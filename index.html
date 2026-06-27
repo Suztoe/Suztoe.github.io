@@ -1,0 +1,982 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
+<title>ワードウルフ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@500;700;800&family=Noto+Sans+JP:wght@400;500;700;900&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+<style>
+/* ===================== Tokens ===================== */
+:root{
+  --ink:#14171f;
+  --ink-2:#1b202b;
+  --ink-3:#232a38;
+  --paper:#f3ead9;
+  --paper-dim:#cfc6b3;
+  --amber:#e8763a;
+  --amber-dim:#a8552a;
+  --teal:#3aa6a0;
+  --red:#d24b4b;
+  --line:rgba(243,234,217,0.12);
+  --shadow: 0 20px 40px -20px rgba(0,0,0,0.6);
+  --serif: 'Shippori Mincho', serif;
+  --sans: 'Noto Sans JP', sans-serif;
+}
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;}
+body{
+  background: radial-gradient(circle at 20% -10%, #1d2434 0%, var(--ink) 55%);
+  color: var(--paper);
+  font-family: var(--sans);
+  min-height:100vh;
+  -webkit-tap-highlight-color: transparent;
+}
+button{font-family:inherit;}
+.app{
+  max-width: 480px;
+  margin: 0 auto;
+  min-height: 100vh;
+  display:flex;
+  flex-direction:column;
+  position:relative;
+  padding: 0 18px 24px;
+}
+
+/* ===================== Header / Howl mark ===================== */
+.howl-mark{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  padding: 22px 0 10px;
+}
+.howl-mark svg{ width:34px; height:34px; flex-shrink:0; }
+.howl-mark .wordmark{
+  font-family: var(--serif);
+  font-weight:800;
+  font-size: 22px;
+  letter-spacing: 0.06em;
+  color: var(--paper);
+}
+.howl-mark .wordmark span{ color: var(--amber); }
+.room-pill{
+  margin-left:auto;
+  font-size:12px;
+  color: var(--paper-dim);
+  border:1px solid var(--line);
+  border-radius:20px;
+  padding: 6px 12px;
+  letter-spacing: 0.08em;
+}
+
+/* ===================== Generic ===================== */
+.screen{ flex:1; display:flex; flex-direction:column; gap:16px; animation: rise .35s ease; }
+@keyframes rise{ from{ opacity:0; transform:translateY(8px); } to{opacity:1; transform:translateY(0);} }
+.card{
+  background: var(--ink-2);
+  border:1px solid var(--line);
+  border-radius: 18px;
+  padding: 20px;
+  box-shadow: var(--shadow);
+}
+h1.title{
+  font-family: var(--serif);
+  font-weight:800;
+  font-size: 26px;
+  line-height:1.35;
+  margin: 4px 0 0;
+}
+p.lede{ color:var(--paper-dim); font-size:14px; line-height:1.7; margin:0; }
+label.field-label{
+  display:block;
+  font-size:12px;
+  color: var(--paper-dim);
+  letter-spacing:0.08em;
+  margin-bottom:6px;
+}
+input[type=text], input[type=number]{
+  width:100%;
+  background: var(--ink-3);
+  border:1px solid var(--line);
+  border-radius:12px;
+  padding:14px 14px;
+  font-size:16px;
+  color: var(--paper);
+  outline:none;
+  font-family: var(--sans);
+}
+input[type=text]:focus, input[type=number]:focus{ border-color: var(--amber); }
+input[type=text]::placeholder{ color: #6b7180; }
+.row{ display:flex; gap:10px; }
+.row > *{ flex:1; }
+
+.btn{
+  border:none;
+  border-radius:14px;
+  padding:15px 18px;
+  font-size:15px;
+  font-weight:700;
+  cursor:pointer;
+  letter-spacing:0.02em;
+  transition: transform .12s ease, filter .12s ease;
+}
+.btn:active{ transform: scale(0.97); }
+.btn-primary{ background: linear-gradient(180deg, var(--amber), var(--amber-dim)); color:#1b0f06; }
+.btn-primary:disabled{ filter: grayscale(0.6) brightness(0.6); cursor:not-allowed; }
+.btn-ghost{ background: transparent; border:1px solid var(--line); color: var(--paper); }
+.btn-teal{ background: linear-gradient(180deg, #4fc3bd, var(--teal)); color:#06241f; }
+.btn-danger{ background: transparent; border:1px solid var(--red); color: var(--red); }
+.btn-block{ width:100%; }
+.btn-sm{ padding:9px 14px; font-size:13px; border-radius:10px; }
+
+.tabbar{ display:flex; gap:8px; }
+.tab{
+  flex:1; text-align:center; padding:11px 0; border-radius:12px;
+  font-size:13px; font-weight:700; color:var(--paper-dim);
+  border:1px solid var(--line); cursor:pointer;
+}
+.tab.active{ background: var(--amber); color:#1b0f06; border-color: transparent; }
+
+/* ===================== Join screen ===================== */
+.mode-toggle{ display:flex; gap:8px; margin-top:4px; }
+.mode-btn{
+  flex:1; padding:12px; border-radius:12px; text-align:center;
+  border:1px solid var(--line); color:var(--paper-dim); font-weight:700; font-size:14px; cursor:pointer;
+}
+.mode-btn.active{ border-color: var(--amber); color:var(--amber); background: rgba(232,118,58,0.08); }
+.hint{ font-size:12px; color:#6b7180; margin-top:-4px; }
+.error-box{
+  background: rgba(210,75,75,0.12); border:1px solid rgba(210,75,75,0.4);
+  color:#ff9b9b; font-size:13px; border-radius:10px; padding:10px 12px;
+}
+
+/* ===================== Lobby ===================== */
+.player-list{ display:flex; flex-direction:column; gap:8px; }
+.player-row{
+  display:flex; align-items:center; gap:10px;
+  background: var(--ink-3); border-radius:12px; padding:10px 12px;
+}
+.avatar{
+  width:34px; height:34px; border-radius:50%; flex-shrink:0;
+  display:flex; align-items:center; justify-content:center;
+  font-weight:800; font-size:14px; color:#1b0f06;
+}
+.player-row .name{ font-size:14px; font-weight:600; flex:1; }
+.badge{ font-size:11px; padding:3px 8px; border-radius:8px; background: var(--ink); color:var(--paper-dim); }
+.badge.host{ background: var(--amber); color:#1b0f06; }
+.badge.you{ background: var(--teal); color:#06241f; }
+
+.stepper{ display:flex; align-items:center; gap:14px; }
+.stepper button{
+  width:38px; height:38px; border-radius:10px; border:1px solid var(--line);
+  background: var(--ink-3); color: var(--paper); font-size:18px; cursor:pointer;
+}
+.stepper .val{ font-size:20px; font-weight:800; min-width:30px; text-align:center; }
+
+/* ===================== Word card ===================== */
+.word-stage{ display:flex; flex-direction:column; align-items:center; gap:18px; padding: 10px 0 4px; }
+.flip-card{
+  width: 220px; height: 300px; perspective: 1200px; cursor:pointer;
+}
+.flip-card-inner{
+  position:relative; width:100%; height:100%; transition: transform .6s cubic-bezier(.4,.2,.2,1);
+  transform-style: preserve-3d;
+}
+.flip-card.flipped .flip-card-inner{ transform: rotateY(180deg); }
+.flip-face{
+  position:absolute; inset:0; backface-visibility:hidden;
+  border-radius:20px; display:flex; flex-direction:column; align-items:center; justify-content:center;
+  box-shadow: var(--shadow);
+}
+.flip-front{
+  background:
+    repeating-linear-gradient(45deg, rgba(243,234,217,0.04) 0 2px, transparent 2px 14px),
+    linear-gradient(160deg, #2a3245, #181d29);
+  border:1px solid var(--line);
+}
+.flip-front .paw{ font-size:54px; opacity:0.85; }
+.flip-front .tap-hint{ margin-top:14px; font-size:12px; color: var(--paper-dim); letter-spacing:0.1em; }
+.flip-back{
+  background: linear-gradient(165deg, var(--paper), #e6dcc4);
+  color:#22180a;
+  transform: rotateY(180deg);
+  padding: 18px;
+  text-align:center;
+}
+.flip-back .role-tag{
+  font-size:11px; letter-spacing:0.15em; color:#8a6b3c; font-weight:700; margin-bottom:10px;
+}
+.flip-back .word{
+  font-family: var(--serif); font-weight:800; font-size: 30px; line-height:1.3; word-break: break-word;
+}
+.flip-back.is-wolf .role-tag{ color: var(--red); }
+
+.discuss-meta{ display:flex; gap:10px; }
+.meta-chip{
+  flex:1; background: var(--ink-3); border-radius:12px; padding:12px; text-align:center;
+}
+.meta-chip .num{ font-size:22px; font-weight:800; font-family: var(--serif); }
+.meta-chip .lbl{ font-size:11px; color: var(--paper-dim); margin-top:2px; letter-spacing:0.06em; }
+
+/* ===================== Chat ===================== */
+.chat-wrap{ display:flex; flex-direction:column; flex:1; min-height: 0; }
+.chat-log{
+  flex:1; overflow-y:auto; display:flex; flex-direction:column; gap:8px;
+  padding: 4px 2px 10px; max-height: 320px;
+}
+.chat-msg{ display:flex; gap:8px; align-items:flex-end; }
+.chat-msg.mine{ flex-direction:row-reverse; }
+.chat-bubble{
+  background: var(--ink-3); border-radius: 14px; padding: 9px 13px; font-size:14px; max-width: 75%;
+  line-height:1.5;
+}
+.chat-msg.mine .chat-bubble{ background: var(--amber-dim); color:#fff0e4; }
+.chat-msg .who{ font-size:11px; color: var(--paper-dim); margin-bottom:2px; }
+.chat-msg.system{ justify-content:center; }
+.chat-msg.system .chat-bubble{ background:transparent; color:#6b7180; font-size:12px; padding:4px; }
+.chat-input-row{ display:flex; gap:8px; margin-top:8px; }
+.chat-input-row input{ flex:1; }
+.send-btn{
+  width:48px; border-radius:12px; border:none; background: var(--amber); color:#1b0f06;
+  font-size:18px; cursor:pointer; flex-shrink:0;
+}
+
+/* ===================== Voting ===================== */
+.vote-list{ display:flex; flex-direction:column; gap:8px; }
+.vote-row{
+  display:flex; align-items:center; gap:10px;
+  background: var(--ink-3); border-radius:12px; padding:10px 12px;
+  border:2px solid transparent; cursor:pointer;
+}
+.vote-row.selected{ border-color: var(--amber); background: rgba(232,118,58,0.1); }
+.vote-row .count{ margin-left:auto; font-size:12px; color: var(--paper-dim); }
+.vote-row.disabled{ opacity:0.5; cursor:default; }
+
+/* ===================== Results ===================== */
+.result-banner{
+  text-align:center; padding: 18px 10px; border-radius:16px;
+  background: linear-gradient(160deg, rgba(232,118,58,0.18), rgba(232,118,58,0.04));
+  border:1px solid rgba(232,118,58,0.3);
+}
+.result-banner .big{ font-family: var(--serif); font-weight:800; font-size:22px; }
+.result-banner.miss{ background: linear-gradient(160deg, rgba(58,166,160,0.18), rgba(58,166,160,0.04)); border-color: rgba(58,166,160,0.3); }
+.word-pair{ display:flex; gap:10px; }
+.word-pair .wp-card{
+  flex:1; background: var(--ink-3); border-radius:12px; padding:14px; text-align:center;
+}
+.word-pair .wp-card .lbl{ font-size:11px; color:var(--paper-dim); letter-spacing:0.08em; margin-bottom:6px;}
+.word-pair .wp-card .wv{ font-family: var(--serif); font-weight:800; font-size:19px; }
+.word-pair .wp-card.wolf .wv{ color: var(--red); }
+
+.tally-row{ display:flex; align-items:center; gap:10px; font-size:13px; }
+.tally-row .bar-bg{ flex:1; background: var(--ink-3); height:8px; border-radius:6px; overflow:hidden; }
+.tally-row .bar-fill{ height:100%; background: var(--amber); border-radius:6px; }
+
+footer.fab-bar{ position: sticky; bottom:0; display:flex; gap:10px; padding-top: 10px; background: linear-gradient(180deg, transparent, var(--ink) 40%); }
+
+.copy-row{ display:flex; gap:8px; align-items:center; }
+.code-display{
+  font-family: var(--serif); font-size: 30px; font-weight:800; letter-spacing: 0.12em;
+  background: var(--ink-3); border-radius:14px; padding: 14px 10px; text-align:center; flex:1;
+  color: var(--amber);
+}
+.toast{
+  position:fixed; bottom: 22px; left:50%; transform: translateX(-50%);
+  background: var(--ink-3); border:1px solid var(--line); border-radius:12px;
+  padding: 10px 16px; font-size:13px; z-index:50; box-shadow: var(--shadow);
+}
+.muted-link{ background:none; border:none; color:var(--paper-dim); font-size:13px; text-decoration:underline; cursor:pointer; padding:6px; }
+::-webkit-scrollbar{ width:6px; }
+::-webkit-scrollbar-thumb{ background: var(--ink-3); border-radius:4px; }
+@media (prefers-reduced-motion: reduce){
+  .screen, .flip-card-inner{ animation:none !important; transition:none !important; }
+}
+</style>
+</head>
+<body>
+<div class="app" id="app"></div>
+
+<script>
+/* =========================================================================
+   WORD WOLF (ワードウルフ) — single file, no backend.
+   Networking: PeerJS star topology. Host is the hub; every message from a
+   guest goes host -> rebroadcast to all. Room code = short Peer ID.
+   ========================================================================= */
+
+/* ----------------------------- Word bank ----------------------------- */
+// Each pair: [citizen word, wolf word] — close enough to cause confusion,
+// far enough to be discoverable through conversation.
+const WORD_PAIRS = [
+  ["カレー","シチュー"],["ラーメン","うどん"],["スイカ","メロン"],["コーヒー","紅茶"],
+  ["寿司","刺身"],["焼肉","しゃぶしゃぶ"],["アイス","シャーベット"],["パン","ケーキ"],
+  ["夏","梅雨"],["雪","雹"],["朝日","夕日"],["山","丘"],
+  ["海","湖"],["猫","狸"],["犬","狼"],["ウサギ","リス"],
+  ["図書館","本屋"],["公園","庭"],["駅","バス停"],["教室","会議室"],
+  ["スマホ","タブレット"],["自転車","バイク"],["電車","新幹線"],["飛行機","ヘリコプター"],
+  ["medico","看護師"],["先生","教授"],["警察","警備員"],["消防士","救急隊員"],
+  ["サッカー","フットサル"],["野球","ソフトボール"],["卓球","バドミントン"],["柔道","レスリング"],
+  ["温泉","銭湯"],["プール","海水浴"],["遊園地","動物園"],["水族館","博物館"],
+  ["映画館","劇場"],["漫画","小説"],["ドラマ","映画"],["ラジオ","ポッドキャスト"],
+  ["スマートウォッチ","腕時計"],["イヤホン","ヘッドホン"],["扇風機","エアコン"],["こたつ","ストーブ"],
+  ["紙コップ","マグカップ"],["箸","フォーク"],["お茶碗","お皿"],["鍋","フライパン"],
+  ["雷","台風"],["地震","津波"],["虹","オーロラ"],["星","月"],
+  ["桜","紫陽花"],["紅葉","新緑"],["バラ","チューリップ"],["松","竹"],
+  ["コンビニ","スーパー"],["居酒屋","バー"],["カフェ","喫茶店"],["ホテル","旅館"],
+  ["タクシー","リムジン"],["地下鉄","モノレール"],["船","ヨット"],["気球","パラグライダー"],
+  ["echo","Siri"],["YouTuber","アイドル"],["将棋","チェス"],["麻雀","花札"],
+  ["折り紙","切り絵"],["習字","絵手紙"],["盆栽","花束"],["祭り","花火大会"],
+  ["雪だるま","かまくら"],["スキー","スノーボード"],["登山","ハイキング"],["キャンプ","グランピング"],
+  ["クレヨン","色鉛筆"],["絵日記","作文"],["ノート","手帳"],["消しゴム","修正テープ"],
+];
+
+/* ----------------------------- State ----------------------------- */
+const S = {
+  me: { id: null, name: "" },
+  isHost: false,
+  roomCode: "",
+  peer: null,
+  conns: {},          // host: peerId -> DataConnection  | guest: { host: conn }
+  players: [],        // [{id, name}]
+  settings: { wolves: 1, discussSeconds: 180 },
+  phase: "join",      // join | lobby | word | discuss | vote | result
+  myWord: "",
+  myRole: "",         // "citizen" | "wolf"
+  wolfWord: "", citizenWord: "",
+  chat: [],
+  votes: {},          // voterId -> targetId
+  timerEnd: 0,
+  timerHandle: null,
+  flipped: false,
+  selectedVoteTarget: null,
+  toastTimer: null,
+};
+
+function uid(){ return Math.random().toString(36).slice(2,9); }
+function shortCode(){
+  const ABC = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  let s=""; for(let i=0;i<4;i++) s += ABC[Math.floor(Math.random()*ABC.length)];
+  return s;
+}
+function el(html){ const t=document.createElement('template'); t.innerHTML = html.trim(); return t.content.firstChild; }
+function colorFor(id){
+  const palette = ["#e8763a","#3aa6a0","#c98bd8","#e0b341","#6f9ce8","#e36b96"];
+  let h=0; for(const c of id) h = (h*31 + c.charCodeAt(0)) % 997;
+  return palette[h % palette.length];
+}
+function initials(name){ return (name||"?").trim().slice(0,1).toUpperCase(); }
+
+function showToast(msg){
+  clearTimeout(S.toastTimer);
+  let t = document.getElementById('toast');
+  if(!t){ t = el(`<div class="toast" id="toast"></div>`); document.body.appendChild(t); }
+  t.textContent = msg;
+  t.style.display = 'block';
+  S.toastTimer = setTimeout(()=>{ t.style.display='none'; }, 2200);
+}
+
+/* ----------------------------- Networking ----------------------------- */
+function broadcastFromHost(msg, exceptId){
+  for(const pid in S.conns){
+    if(pid === exceptId) continue;
+    const c = S.conns[pid];
+    if(c && c.open) c.send(msg);
+  }
+}
+
+function sendToHost(msg){
+  if(S.isHost){ handleHostMessage(msg, S.me.id); return; }
+  const c = S.conns.host;
+  if(c && c.open) c.send(msg);
+}
+
+// Host receives a message from a player (or itself) and decides what to do.
+function handleHostMessage(msg, fromId){
+  switch(msg.type){
+    case "join-request": {
+      const p = { id: fromId, name: msg.name };
+      if(!S.players.find(x=>x.id===fromId)) S.players.push(p);
+      pushChatSystem(`${msg.name} さんが参加しました`);
+      hostBroadcastState();
+      break;
+    }
+    case "leave": {
+      S.players = S.players.filter(p=>p.id!==fromId);
+      delete S.conns[fromId];
+      pushChatSystem(`${msg.name||"プレイヤー"} さんが退出しました`);
+      hostBroadcastState();
+      break;
+    }
+    case "chat": {
+      const player = S.players.find(p=>p.id===fromId);
+      pushChat({ id: uid(), authorId: fromId, name: player?player.name:"???", text: msg.text });
+      hostBroadcastState();
+      break;
+    }
+    case "vote": {
+      S.votes[fromId] = msg.targetId;
+      hostBroadcastState();
+      break;
+    }
+    case "request-state": {
+      const c = S.conns[fromId];
+      if(c) c.send(buildStatePacket());
+      break;
+    }
+    case "settings-update": {
+      if(fromId === S.me.id){ // only host's own UI may change settings
+        S.settings = msg.settings;
+        hostBroadcastState();
+      }
+      break;
+    }
+    case "start-game": {
+      if(fromId === S.me.id) hostStartGame();
+      break;
+    }
+    case "go-vote": {
+      if(fromId === S.me.id) hostGoVote();
+      break;
+    }
+    case "reveal": {
+      if(fromId === S.me.id) hostReveal();
+      break;
+    }
+    case "reset-lobby": {
+      if(fromId === S.me.id) hostResetLobby();
+      break;
+    }
+  }
+}
+
+function pushChat(m){ S.chat.push(m); if(S.chat.length>200) S.chat.shift(); }
+function pushChatSystem(text){ pushChat({ id:uid(), system:true, text }); }
+
+function buildStatePacket(){
+  return {
+    type: "state",
+    players: S.players,
+    settings: S.settings,
+    phase: S.phase,
+    chat: S.chat,
+    votes: S.votes,
+    timerEnd: S.timerEnd,
+    // word assignment is per-player, sent separately below
+  };
+}
+
+function hostBroadcastState(){
+  const packet = buildStatePacket();
+  broadcastFromHost(packet);
+  render(); // re-render host's own UI from authoritative state
+}
+
+function hostSendPrivateWord(targetId, word, role){
+  if(targetId === S.me.id){ S.myWord = word; S.myRole = role; render(); return; }
+  const c = S.conns[targetId];
+  if(c && c.open) c.send({ type:"your-word", word, role });
+}
+
+/* ----------------------------- Host game logic ----------------------------- */
+function hostStartGame(){
+  if(S.players.length < 3){ showToast("3人以上で開始できます"); return; }
+  const wolfCount = Math.min(S.settings.wolves, Math.max(1, S.players.length-2));
+  const pair = WORD_PAIRS[Math.floor(Math.random()*WORD_PAIRS.length)];
+  S.citizenWord = pair[0]; S.wolfWord = pair[1];
+  const shuffled = [...S.players].sort(()=>Math.random()-0.5);
+  const wolfIds = new Set(shuffled.slice(0, wolfCount).map(p=>p.id));
+  S.players.forEach(p=>{
+    const isWolf = wolfIds.has(p.id);
+    hostSendPrivateWord(p.id, isWolf ? S.wolfWord : S.citizenWord, isWolf ? "wolf":"citizen");
+  });
+  S.votes = {};
+  S.phase = "word";
+  S.timerEnd = Date.now() + S.settings.discussSeconds*1000;
+  pushChatSystem("ゲーム開始！自分の手札（ワード）を確認してね");
+  hostBroadcastState();
+}
+function hostGoVote(){
+  S.phase = "vote";
+  S.votes = {};
+  pushChatSystem("投票タイムです。人狼だと思う人に投票しよう");
+  hostBroadcastState();
+}
+function hostReveal(){
+  S.phase = "result";
+  pushChatSystem("結果発表！");
+  hostBroadcastState();
+}
+function hostResetLobby(){
+  S.phase = "lobby";
+  S.votes = {};
+  S.myWord = ""; S.myRole = "";
+  for(const pid in S.conns){ const c=S.conns[pid]; if(c&&c.open) c.send({type:"clear-word"}); }
+  pushChatSystem("ロビーに戻りました");
+  hostBroadcastState();
+}
+
+/* ----------------------------- Guest receive ----------------------------- */
+function handleGuestMessage(msg){
+  switch(msg.type){
+    case "state": {
+      S.players = msg.players; S.settings = msg.settings; S.phase = msg.phase;
+      S.chat = msg.chat; S.votes = msg.votes; S.timerEnd = msg.timerEnd;
+      render();
+      break;
+    }
+    case "your-word": {
+      S.myWord = msg.word; S.myRole = msg.role; S.flipped = false;
+      render();
+      break;
+    }
+    case "clear-word": {
+      S.myWord = ""; S.myRole = ""; S.flipped=false;
+      break;
+    }
+  }
+}
+
+/* ----------------------------- Setting up Peer ----------------------------- */
+function setupPeerAsHost(name){
+  S.isHost = true;
+  S.me.id = "host-" + uid();
+  S.me.name = name;
+  S.roomCode = shortCode();
+  const peer = new Peer("ww-" + S.roomCode, { debug: 0 });
+  S.peer = peer;
+  peer.on('open', ()=>{
+    S.players = [{ id: S.me.id, name }];
+    S.phase = "lobby";
+    render();
+  });
+  peer.on('connection', (conn)=>{
+    conn.on('open', ()=>{
+      S.conns[conn.peer] = conn;
+    });
+    conn.on('data', (msg)=>{ handleHostMessage(msg, conn.peer); });
+    conn.on('close', ()=>{
+      S.players = S.players.filter(p=>p.id!==conn.peer);
+      delete S.conns[conn.peer];
+      hostBroadcastState();
+    });
+  });
+  peer.on('error', (err)=>{
+    console.error(err);
+    if(String(err).includes('unavailable-id')){ showToast("ルーム作成に失敗。もう一度試してください"); }
+  });
+}
+
+function setupPeerAsGuest(name, code){
+  S.isHost = false;
+  S.me.id = "p-" + uid();
+  S.me.name = name;
+  S.roomCode = code.toUpperCase();
+  const peer = new Peer(S.me.id, { debug: 0 });
+  S.peer = peer;
+  peer.on('open', ()=>{
+    const conn = peer.connect("ww-" + S.roomCode, { reliable:true });
+    S.conns.host = conn;
+    conn.on('open', ()=>{
+      conn.send({ type:"join-request", name });
+      S.phase = "lobby";
+      render();
+    });
+    conn.on('data', (msg)=>{ handleGuestMessage(msg); });
+    conn.on('close', ()=>{
+      showToast("ホストとの接続が切れました");
+      S.phase = "join";
+      render();
+    });
+    conn.on('error', ()=>{ showError("ルームに接続できませんでした。コードを確認してください"); });
+  });
+  peer.on('error', (err)=>{
+    console.error(err);
+    showError("接続エラーが発生しました。コードを確認してください");
+  });
+}
+
+function leaveRoom(){
+  sendToHost({ type:"leave", name: S.me.name });
+  if(S.peer) S.peer.destroy();
+  Object.assign(S, {
+    isHost:false, roomCode:"", peer:null, conns:{}, players:[], phase:"join",
+    myWord:"", myRole:"", chat:[], votes:{}, flipped:false, selectedVoteTarget:null,
+  });
+  render();
+}
+
+let joinError = "";
+function showError(msg){ joinError = msg; render(); }
+
+/* ----------------------------- Timer ----------------------------- */
+function tickTimer(){
+  if(S.phase !== "word" && S.phase !== "discuss"){ return; }
+  const remain = Math.max(0, Math.round((S.timerEnd - Date.now())/1000));
+  const elTimer = document.getElementById('timer-num');
+  if(elTimer) elTimer.textContent = formatTime(remain);
+}
+function formatTime(sec){ const m=Math.floor(sec/60), s=sec%60; return `${m}:${String(s).padStart(2,'0')}`; }
+setInterval(tickTimer, 1000);
+
+/* =========================================================================
+   RENDER
+   ========================================================================= */
+function render(){
+  const app = document.getElementById('app');
+  app.innerHTML = "";
+  app.appendChild(renderHeader());
+  let screen;
+  switch(S.phase){
+    case "join": screen = renderJoin(); break;
+    case "lobby": screen = renderLobby(); break;
+    case "word": screen = renderWord(); break;
+    case "vote": screen = renderVote(); break;
+    case "result": screen = renderResult(); break;
+    default: screen = renderJoin();
+  }
+  app.appendChild(screen);
+}
+
+function renderHeader(){
+  const wrap = el(`<div class="howl-mark">
+    <svg viewBox="0 0 64 64" fill="none">
+      <path d="M32 6 L46 30 L40 30 L50 50 L32 42 L14 50 L24 30 L18 30 Z" fill="#e8763a"/>
+      <circle cx="26" cy="26" r="2.4" fill="#14171f"/>
+      <circle cx="38" cy="26" r="2.4" fill="#14171f"/>
+    </svg>
+    <div class="wordmark">Word<span>Wolf</span></div>
+  </div>`);
+  if(S.roomCode && S.phase!=="join"){
+    wrap.appendChild(el(`<div class="room-pill">ROOM ${S.roomCode}</div>`));
+  }
+  return wrap;
+}
+
+/* ---------- Join screen ---------- */
+let joinMode = "create"; // create | join
+function renderJoin(){
+  const wrap = el(`<div class="screen"></div>`);
+  wrap.appendChild(el(`<h1 class="title">合言葉は、ひとつだけ違う。</h1>`));
+  wrap.appendChild(el(`<p class="lede">同じ単語を渡されたつもりで会話して、紛れ込んだ「人狼」を見破ろう。コード一つで友達とすぐに遊べます。</p>`));
+
+  const card = el(`<div class="card"></div>`);
+  const toggle = el(`<div class="mode-toggle">
+    <div class="mode-btn ${joinMode==='create'?'active':''}" id="mode-create">部屋を作る</div>
+    <div class="mode-btn ${joinMode==='join'?'active':''}" id="mode-join">コードで参加</div>
+  </div>`);
+  card.appendChild(toggle);
+
+  const nameField = el(`<div>
+    <label class="field-label">なまえ</label>
+    <input type="text" id="name-input" placeholder="例：たぬき" maxlength="12">
+  </div>`);
+  card.appendChild(el(`<div style="height:4px"></div>`));
+  card.appendChild(nameField);
+
+  if(joinMode === "join"){
+    const codeField = el(`<div>
+      <label class="field-label">ルームコード（4文字）</label>
+      <input type="text" id="code-input" placeholder="例：A3X9" maxlength="4" style="letter-spacing:0.2em;text-transform:uppercase;">
+    </div>`);
+    card.appendChild(codeField);
+  } else {
+    card.appendChild(el(`<p class="hint">作成すると4文字のコードが発行されます。それを友達に伝えてね。</p>`));
+  }
+
+  if(joinError){
+    card.appendChild(el(`<div class="error-box">${joinError}</div>`));
+  }
+
+  const btn = el(`<button class="btn btn-primary btn-block">${joinMode==='create'?'部屋を作る':'参加する'}</button>`);
+  card.appendChild(el(`<div style="height:4px"></div>`));
+  card.appendChild(btn);
+  wrap.appendChild(card);
+
+  wrap.querySelector('#mode-create').onclick = ()=>{ joinMode='create'; joinError=""; render(); };
+  wrap.querySelector('#mode-join').onclick = ()=>{ joinMode='join'; joinError=""; render(); };
+
+  btn.onclick = ()=>{
+    const name = wrap.querySelector('#name-input').value.trim();
+    if(!name){ showError("なまえを入力してください"); return; }
+    if(joinMode === "create"){
+      joinError = "";
+      setupPeerAsHost(name);
+    } else {
+      const code = wrap.querySelector('#code-input').value.trim();
+      if(code.length !== 4){ showError("4文字のコードを入力してください"); return; }
+      joinError = "";
+      setupPeerAsGuest(name, code);
+    }
+  };
+  return wrap;
+}
+
+/* ---------- Lobby ---------- */
+function renderLobby(){
+  const wrap = el(`<div class="screen"></div>`);
+  wrap.appendChild(el(`<h1 class="title">ロビー</h1>`));
+
+  const codeCard = el(`<div class="card"></div>`);
+  codeCard.appendChild(el(`<label class="field-label">このコードを友達に共有</label>`));
+  const copyRow = el(`<div class="copy-row">
+    <div class="code-display">${S.roomCode}</div>
+    <button class="btn btn-ghost btn-sm" id="copy-btn" style="height:fit-content">コピー</button>
+  </div>`);
+  codeCard.appendChild(copyRow);
+  wrap.appendChild(codeCard);
+  codeCard.querySelector('#copy-btn').onclick = ()=>{
+    navigator.clipboard?.writeText(S.roomCode).then(()=>showToast("コピーしました")).catch(()=>{});
+  };
+
+  const playerCard = el(`<div class="card"></div>`);
+  playerCard.appendChild(el(`<label class="field-label">プレイヤー（${S.players.length}）</label>`));
+  const list = el(`<div class="player-list"></div>`);
+  S.players.forEach(p=>{
+    const isHostP = S.isHost ? p.id===S.me.id : (S.players[0] && p.id===S.players[0].id);
+    const row = el(`<div class="player-row">
+      <div class="avatar" style="background:${colorFor(p.id)}">${initials(p.name)}</div>
+      <div class="name">${escapeHtml(p.name)}</div>
+      ${p.id===S.me.id ? '<span class="badge you">YOU</span>' : ''}
+    </div>`);
+    list.appendChild(row);
+  });
+  playerCard.appendChild(list);
+  wrap.appendChild(playerCard);
+
+  if(S.isHost){
+    const settingsCard = el(`<div class="card"></div>`);
+    settingsCard.appendChild(el(`<label class="field-label">人狼の人数</label>`));
+    const stepper = el(`<div class="stepper">
+      <button id="wolf-minus">−</button>
+      <div class="val">${S.settings.wolves}</div>
+      <button id="wolf-plus">＋</button>
+      <div style="flex:1"></div>
+    </div>`);
+    settingsCard.appendChild(stepper);
+    settingsCard.appendChild(el(`<div style="height:10px"></div>`));
+    settingsCard.appendChild(el(`<label class="field-label">議論タイマー（秒）</label>`));
+    const stepper2 = el(`<div class="stepper">
+      <button id="time-minus">−</button>
+      <div class="val" id="time-val">${S.settings.discussSeconds}</div>
+      <button id="time-plus">＋</button>
+      <div style="flex:1"></div>
+    </div>`);
+    settingsCard.appendChild(stepper2);
+    wrap.appendChild(settingsCard);
+
+    stepper.querySelector('#wolf-minus').onclick = ()=> updateSettings({ wolves: Math.max(1, S.settings.wolves-1) });
+    stepper.querySelector('#wolf-plus').onclick = ()=> updateSettings({ wolves: Math.min(4, S.settings.wolves+1) });
+    stepper2.querySelector('#time-minus').onclick = ()=> updateSettings({ discussSeconds: Math.max(30, S.settings.discussSeconds-30) });
+    stepper2.querySelector('#time-plus').onclick = ()=> updateSettings({ discussSeconds: Math.min(600, S.settings.discussSeconds+30) });
+
+    const startBtn = el(`<button class="btn btn-primary btn-block" ${S.players.length<3?'disabled':''}>${S.players.length<3?'3人以上で開始できます':'ゲームを開始する'}</button>`);
+    startBtn.onclick = ()=> sendToHost({ type:"start-game" });
+    wrap.appendChild(startBtn);
+  } else {
+    wrap.appendChild(el(`<p class="lede" style="text-align:center">ホストがゲームを開始するまで待ってね</p>`));
+  }
+
+  wrap.appendChild(renderChat(false));
+
+  const leaveBtn = el(`<button class="muted-link">退出する</button>`);
+  leaveBtn.onclick = leaveRoom;
+  wrap.appendChild(leaveBtn);
+
+  return wrap;
+}
+function updateSettings(patch){
+  S.settings = { ...S.settings, ...patch };
+  sendToHost({ type:"settings-update", settings: S.settings });
+  if(S.isHost) hostBroadcastState();
+}
+
+/* ---------- Word / Discuss screen ---------- */
+function renderWord(){
+  const wrap = el(`<div class="screen"></div>`);
+  wrap.appendChild(el(`<h1 class="title">あなたの手札</h1>`));
+  wrap.appendChild(el(`<p class="lede">タップしてワードを確認。声に出さず、それっぽい話題で会話を進めよう。</p>`));
+
+  const stage = el(`<div class="word-stage"></div>`);
+  const flip = el(`<div class="flip-card ${S.flipped?'flipped':''}">
+    <div class="flip-card-inner">
+      <div class="flip-face flip-front">
+        <div class="paw">🐾</div>
+        <div class="tap-hint">TAP TO REVEAL</div>
+      </div>
+      <div class="flip-face flip-back ${S.myRole==='wolf'?'is-wolf':''}">
+        <div class="role-tag">${S.myRole==='wolf' ? 'あなたは人狼' : 'あなたは市民'}</div>
+        <div class="word">${escapeHtml(S.myWord || '???')}</div>
+      </div>
+    </div>
+  </div>`);
+  flip.onclick = ()=>{ S.flipped = !S.flipped; render(); };
+  stage.appendChild(flip);
+  wrap.appendChild(stage);
+
+  const meta = el(`<div class="discuss-meta">
+    <div class="meta-chip"><div class="num" id="timer-num">${formatTime(Math.max(0,Math.round((S.timerEnd-Date.now())/1000)))}</div><div class="lbl">残り議論時間</div></div>
+    <div class="meta-chip"><div class="num">${S.players.length}</div><div class="lbl">プレイヤー</div></div>
+  </div>`);
+  wrap.appendChild(meta);
+
+  wrap.appendChild(renderChat(true));
+
+  if(S.isHost){
+    const voteBtn = el(`<button class="btn btn-teal btn-block">投票へすすむ</button>`);
+    voteBtn.onclick = ()=> sendToHost({ type:"go-vote" });
+    wrap.appendChild(voteBtn);
+  } else {
+    wrap.appendChild(el(`<p class="hint" style="text-align:center">ホストが投票フェーズに進めます</p>`));
+  }
+  return wrap;
+}
+
+/* ---------- Vote screen ---------- */
+function renderVote(){
+  const wrap = el(`<div class="screen"></div>`);
+  wrap.appendChild(el(`<h1 class="title">投票タイム</h1>`));
+  wrap.appendChild(el(`<p class="lede">人狼だと思うプレイヤーを選んでね。一度選ぶと投票完了です。</p>`));
+
+  const card = el(`<div class="card"></div>`);
+  const list = el(`<div class="vote-list"></div>`);
+  const myVote = S.votes[S.me.id];
+  S.players.forEach(p=>{
+    const voteCount = Object.values(S.votes).filter(v=>v===p.id).length;
+    const isSelf = p.id === S.me.id;
+    const row = el(`<div class="vote-row ${myVote===p.id?'selected':''} ${isSelf?'disabled':''}">
+      <div class="avatar" style="background:${colorFor(p.id)}">${initials(p.name)}</div>
+      <div class="name">${escapeHtml(p.name)}${isSelf?' (あなた)':''}</div>
+      <div class="count">${voteCount>0?voteCount+'票':''}</div>
+    </div>`);
+    if(!isSelf){
+      row.onclick = ()=>{
+        S.votes[S.me.id] = p.id;
+        sendToHost({ type:"vote", targetId: p.id });
+        if(S.isHost) hostBroadcastState();
+        render();
+      };
+    }
+    list.appendChild(row);
+  });
+  card.appendChild(list);
+  wrap.appendChild(card);
+
+  const votedCount = Object.keys(S.votes).length;
+  wrap.appendChild(el(`<p class="hint" style="text-align:center">${votedCount} / ${S.players.length} 人が投票済み</p>`));
+
+  if(S.isHost){
+    const revealBtn = el(`<button class="btn btn-primary btn-block">結果を発表する</button>`);
+    revealBtn.onclick = ()=> sendToHost({ type:"reveal" });
+    wrap.appendChild(revealBtn);
+  }
+  wrap.appendChild(renderChat(false));
+  return wrap;
+}
+
+/* ---------- Result screen ---------- */
+function renderResult(){
+  const wrap = el(`<div class="screen"></div>`);
+  wrap.appendChild(el(`<h1 class="title">結果発表</h1>`));
+
+  // tally
+  const tally = {};
+  Object.values(S.votes).forEach(t=> tally[t]=(tally[t]||0)+1);
+  let topId = null, topCount = -1;
+  for(const pid in tally){ if(tally[pid] > topCount){ topCount = tally[pid]; topId = pid; } }
+  const topPlayer = S.players.find(p=>p.id===topId);
+
+  const card = el(`<div class="card"></div>`);
+  card.appendChild(el(`<label class="field-label">投票結果</label>`));
+  const maxVotes = Math.max(1, ...Object.values(tally), 0);
+  S.players.slice().sort((a,b)=> (tally[b.id]||0)-(tally[a.id]||0)).forEach(p=>{
+    const v = tally[p.id]||0;
+    card.appendChild(el(`<div class="tally-row" style="margin-bottom:8px">
+      <div style="width:18px;height:18px;border-radius:50%;background:${colorFor(p.id)};flex-shrink:0"></div>
+      <div style="width:64px">${escapeHtml(p.name)}</div>
+      <div class="bar-bg"><div class="bar-fill" style="width:${(v/maxVotes)*100}%"></div></div>
+      <div style="width:30px;text-align:right">${v}票</div>
+    </div>`));
+  });
+  wrap.appendChild(card);
+
+  const banner = el(`<div class="result-banner ${topPlayer? '':'miss'}">
+    <div class="big">${topPlayer ? `${escapeHtml(topPlayer.name)} さんが追放されました` : '票が割れて誰も追放されませんでした'}</div>
+  </div>`);
+  wrap.appendChild(banner);
+
+  const pairCard = el(`<div class="word-pair"></div>`);
+  pairCard.appendChild(el(`<div class="wp-card"><div class="lbl">市民のワード</div><div class="wv">${escapeHtml(S.citizenWord)}</div></div>`));
+  pairCard.appendChild(el(`<div class="wp-card wolf"><div class="lbl">人狼のワード</div><div class="wv">${escapeHtml(S.wolfWord)}</div></div>`));
+  wrap.appendChild(pairCard);
+
+  wrap.appendChild(renderChat(false));
+
+  if(S.isHost){
+    const again = el(`<button class="btn btn-primary btn-block">もう一度遊ぶ</button>`);
+    again.onclick = ()=> sendToHost({ type:"reset-lobby" });
+    wrap.appendChild(again);
+  } else {
+    wrap.appendChild(el(`<p class="hint" style="text-align:center">ホストが次のゲームを開始できます</p>`));
+  }
+  return wrap;
+}
+
+/* ---------- Chat (shared component) ---------- */
+function renderChat(compact){
+  const wrap = el(`<div class="card chat-wrap" style="${compact?'':''}"></div>`);
+  wrap.appendChild(el(`<label class="field-label">チャット</label>`));
+  const log = el(`<div class="chat-log" id="chat-log"></div>`);
+  S.chat.forEach(m=>{
+    if(m.system){
+      log.appendChild(el(`<div class="chat-msg system"><div class="chat-bubble">${escapeHtml(m.text)}</div></div>`));
+    } else {
+      const mine = m.authorId === S.me.id;
+      const bubble = el(`<div class="chat-msg ${mine?'mine':''}">
+        <div class="avatar" style="width:26px;height:26px;font-size:11px;background:${colorFor(m.authorId)}">${initials(m.name)}</div>
+        <div>
+          ${mine?'':`<div class="who">${escapeHtml(m.name)}</div>`}
+          <div class="chat-bubble">${escapeHtml(m.text)}</div>
+        </div>
+      </div>`);
+      log.appendChild(bubble);
+    }
+  });
+  wrap.appendChild(log);
+  const inputRow = el(`<div class="chat-input-row">
+    <input type="text" id="chat-input" placeholder="メッセージを入力" maxlength="200">
+    <button class="send-btn">→</button>
+  </div>`);
+  wrap.appendChild(inputRow);
+
+  const sendIt = ()=>{
+    const input = inputRow.querySelector('#chat-input');
+    const text = input.value.trim();
+    if(!text) return;
+    if(S.isHost){
+      pushChat({ id: uid(), authorId: S.me.id, name: S.me.name, text });
+      hostBroadcastState();
+    } else {
+      sendToHost({ type:"chat", text });
+    }
+    input.value = "";
+  };
+  inputRow.querySelector('.send-btn').onclick = sendIt;
+  inputRow.querySelector('#chat-input').addEventListener('keydown', (e)=>{
+    if(e.key === 'Enter') sendIt();
+  });
+
+  // auto-scroll to bottom after render
+  setTimeout(()=>{ log.scrollTop = log.scrollHeight; }, 0);
+  return wrap;
+}
+
+/* ---------- utils ---------- */
+function escapeHtml(s){
+  return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+/* ----------------------------- Boot ----------------------------- */
+render();
+</script>
+</body>
+</html>
